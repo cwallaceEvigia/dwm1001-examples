@@ -49,12 +49,12 @@ static dwt_config_t config = {
   DWT_PRF_64M,      /* Pulse repetition frequency. */
   DWT_PLEN_128,     /* Preamble length. Used in TX only. */
   DWT_PAC8,         /* Preamble acquisition chunk size. Used in RX only. */
-  10,               /* TX preamble code. Used in TX only. */
-  10,               /* RX preamble code. Used in RX only. */
+  9,               /* TX preamble code. Used in TX only. */
+  9,               /* RX preamble code. Used in RX only. */
   0,                /* 0 to use standard SFD, 1 to use non-standard SFD. */
   DWT_BR_6M8,       /* Data rate. */
-  DWT_PHRMODE_STD,  /* PHY header mode. */
-  (129 + 8 - 8)     /* SFD timeout (preamble length + 1 + SFD length - PAC size). Used in RX only. */
+  DWT_PHRMODE_EXT,  /* PHY header mode. */
+  (4096)     /* SFD timeout (preamble length + 1 + SFD length - PAC size). Used in RX only. */
 };
 
 //--------------dw1000---end---------------
@@ -111,11 +111,11 @@ int main(void)
 
   #ifdef USE_FREERTOS
     /* Create task for LED0 blinking with priority set to 2 */
-    UNUSED_VARIABLE(xTaskCreate(led_toggle_task_function, "LED0", configMINIMAL_STACK_SIZE + 200, NULL, 2, &led_toggle_task_handle));
+ //   UNUSED_VARIABLE(xTaskCreate(led_toggle_task_function, "LED0", configMINIMAL_STACK_SIZE + 200, NULL, 2, &led_toggle_task_handle));
 
     /* Start timer for LED1 blinking */
-    led_toggle_timer_handle = xTimerCreate( "LED1", TIMER_PERIOD, pdTRUE, NULL, led_toggle_timer_callback);
-    UNUSED_VARIABLE(xTimerStart(led_toggle_timer_handle, 0));
+ //   led_toggle_timer_handle = xTimerCreate( "LED1", TIMER_PERIOD, pdTRUE, NULL, led_toggle_timer_callback);
+ //   UNUSED_VARIABLE(xTimerStart(led_toggle_timer_handle, 0));
 
     /* Create task for SS TWR Initiator set to 2 */
     UNUSED_VARIABLE(xTaskCreate(ss_responder_task_function, "SSTWR_RESP", configMINIMAL_STACK_SIZE + 200, NULL, 2, &ss_responder_task_handle)); 
@@ -126,8 +126,16 @@ int main(void)
   /* Setup DW1000 IRQ pin */
   nrf_gpio_cfg_input(DW1000_IRQ, NRF_GPIO_PIN_NOPULL); 		//irq
 
+  /*Initialization UART*/
+  boUART_Init ();
+  printf("UWB Sniffer\r\n");
+
   /* Reset DW1000 */
   reset_DW1000(); 
+
+//  NRF_POWER->SYSTEMOFF = 1;
+
+//  while(1);
 
   /* Set SPI clock to 2MHz */
   port_set_dw1000_slowrate();			

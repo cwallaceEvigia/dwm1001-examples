@@ -48,6 +48,9 @@
 
 #define USE_FREERTOS	// define to use RTOS in this example code. Comment if FREERTOS is not necessary
 
+#ifndef RETARGET_ENABLED
+#define RETARGET_ENABLED 1
+#endif
 
 // <h> Board Support 
 

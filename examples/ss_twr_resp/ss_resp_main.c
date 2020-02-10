@@ -27,7 +27,7 @@
 #include "port_platform.h"
 
 /* Inter-ranging delay period, in milliseconds. See NOTE 1*/
-#define RNG_DELAY_MS 80
+#define RNG_DELAY_MS 0
 
 /* Frames used in the ranging process. See NOTE 2,3 below. */
 static uint8 rx_poll_msg[] = {0x41, 0x88, 0, 0xCA, 0xDE, 'W', 'A', 'V', 'E', 0xE0, 0, 0};
@@ -47,14 +47,14 @@ static uint8 frame_seq_nb = 0;
 
 /* Buffer to store received response message.
 * Its size is adjusted to longest frame that this example code is supposed to handle. */
-#define RX_BUF_LEN 24
+#define RX_BUF_LEN 256
 static uint8 rx_buffer[RX_BUF_LEN];
 
 /* Hold copy of status register state here for reference so that it can be examined at a debug breakpoint. */
 static uint32 status_reg = 0;
 
 /* UWB microsecond (uus) to device time unit (dtu, around 15.65 ps) conversion factor.
-* 1 uus = 512 / 499.2 µs and 1 µs = 499.2 * 128 dtu. */
+* 1 uus = 512 / 499.2 s and 1 s = 499.2 * 128 dtu. */
 #define UUS_TO_DWT_TIME 65536
 
 // Not enough time to write the data so TX timeout extended for nRF operation.
@@ -83,6 +83,7 @@ typedef unsigned long long uint64;
 static uint64 poll_rx_ts;
 static uint64 resp_tx_ts;
 
+//#define DISPLAY_RAW
 /*! ------------------------------------------------------------------------------------------------------------------
 * @fn main()
 *
@@ -93,11 +94,24 @@ static uint64 resp_tx_ts;
 * @return none
 */
 
+int cnt = 0;
 int ss_resp_run(void)
 {
 
+  int i;
+
+//  cnt = 0;
+while(1){
+
+  uint16_t panID;
+  uint8_t seqN;
+  uint16_t destAddr;
+  uint16_t srcAddr;
+  uint8_t mID;
+
   /* Activate reception immediately. */
   dwt_rxenable(DWT_START_RX_IMMEDIATE);
+
 
   /* Poll for reception of a frame or error/timeout. See NOTE 5 below. */
   while (!((status_reg = dwt_read32bitreg(SYS_STATUS_ID)) & (SYS_STATUS_RXFCG | SYS_STATUS_ALL_RX_TO | SYS_STATUS_ALL_RX_ERR)))
@@ -113,6 +127,7 @@ int ss_resp_run(void)
     #endif
 
   if (status_reg & SYS_STATUS_RXFCG)
+  //if(1)
   {
     uint32 frame_len;
 
@@ -126,10 +141,67 @@ int ss_resp_run(void)
       dwt_readrxdata(rx_buffer, frame_len, 0);
     }
 
+    if(frame_len>0){
+      cnt++;
+      
+    }
+    //if((cnt%10)==0) printf("%d, %d\r\n",cnt,frame_len);
+
+    #ifdef DISPLAY_RAW
+    printf("{%d}",frame_len);
+    for(i=0;i<frame_len;i++) {
+    //if( //(i%16)==0) printf("\r\n");
+        printf("[%02X]",rx_buffer[i]);
+    }
+    printf("\r\n");
+    #else
+      seqN = rx_buffer[2];
+      panID = rx_buffer[4]<<8|rx_buffer[3];
+      //destAddr = ((uint16_t)(rx_buffer[6])<<8) || rx_buffer[5];
+      //srcAddr = ((uint16_t)(rx_buffer[8])<<8) || rx_buffer[7];
+      destAddr = rx_buffer[6]<<8|rx_buffer[5];
+      srcAddr = rx_buffer[8]<<8|rx_buffer[7];
+
+      mID = rx_buffer[11];
+
+      if(mID!=0x10 && mID!=0x6A) {
+      printf("src=%04X, dest=%04X, seq=%3d mid=%02X",srcAddr,destAddr, seqN, mID);
+
+      switch(mID)
+      {
+      case 0x10:
+        printf("[UWBMAC_FRM_TYPE_BCN]");
+        break;
+        case 0x23:
+        printf("[UWBMAC_FRM_TYPE_ALMA]");
+        break;
+      case 0x30:
+        printf("[UWBMAC_FRM_TYPE_TWR_GRP_POLL]");
+        break;
+      case 0x65:
+        printf("[UWBMAC_FRM_TYPE_UL_IOT_DATA]");
+        break;
+      case 0x6A:
+        printf("[UWBMAC_FRM_TYPE_BN_BCN]");
+        break;
+      default:
+          printf("[?]");
+      }
+
+      printf("\r\n");
+      for(i=11;i<frame_len;i++) {
+    //if( //(i%16)==0) printf("\r\n");
+        printf("[%02X]",rx_buffer[i]);
+        }
+      printf("\r\n");
+      }
+
+
+    #endif
     /* Check that the frame is a poll sent by "SS TWR initiator" example.
     * As the sequence number field of the frame is not relevant, it is cleared to simplify the validation of the frame. */
-    rx_buffer[ALL_MSG_SN_IDX] = 0;
-    if (memcmp(rx_buffer, rx_poll_msg, ALL_MSG_COMMON_LEN) == 0)
+//    rx_buffer[ALL_MSG_SN_IDX] = 0;
+    if (0)
     {
       uint32 resp_tx_time;
       int ret;
@@ -193,7 +265,7 @@ int ss_resp_run(void)
     /* Reset RX to properly reinitialise LDE operation. */
     dwt_rxreset();
   }
-
+}
   return(1);		
 }
 
