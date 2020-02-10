@@ -155,47 +155,11 @@ while(1){
     }
     printf("\r\n");
     #else
-      seqN = rx_buffer[2];
-      panID = rx_buffer[4]<<8|rx_buffer[3];
-      //destAddr = ((uint16_t)(rx_buffer[6])<<8) || rx_buffer[5];
-      //srcAddr = ((uint16_t)(rx_buffer[8])<<8) || rx_buffer[7];
-      destAddr = rx_buffer[6]<<8|rx_buffer[5];
-      srcAddr = rx_buffer[8]<<8|rx_buffer[7];
-
-      mID = rx_buffer[11];
-
-      if(mID!=0x10 && mID!=0x6A) {
-      printf("src=%04X, dest=%04X, seq=%3d mid=%02X",srcAddr,destAddr, seqN, mID);
-
-      switch(mID)
-      {
-      case 0x10:
-        printf("[UWBMAC_FRM_TYPE_BCN]");
-        break;
-        case 0x23:
-        printf("[UWBMAC_FRM_TYPE_ALMA]");
-        break;
-      case 0x30:
-        printf("[UWBMAC_FRM_TYPE_TWR_GRP_POLL]");
-        break;
-      case 0x65:
-        printf("[UWBMAC_FRM_TYPE_UL_IOT_DATA]");
-        break;
-      case 0x6A:
-        printf("[UWBMAC_FRM_TYPE_BN_BCN]");
-        break;
-      default:
-          printf("[?]");
-      }
-
-      printf("\r\n");
-      for(i=11;i<frame_len;i++) {
-    //if( //(i%16)==0) printf("\r\n");
-        printf("[%02X]",rx_buffer[i]);
-        }
-      printf("\r\n");
-      }
-
+    uint32_t serNum;
+      seqN = rx_buffer[11];
+      serNum = ((uint32_t*)rx_buffer)[0];
+     
+     printf("sn:%d, seq=%d\n",serNum,seqN);
 
     #endif
     /* Check that the frame is a poll sent by "SS TWR initiator" example.
